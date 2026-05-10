@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "sources": ["model"],
+  "projections": {
+    "source": {},
+    "github-pullrequest": {
+      "plugins": {
+        "openapi": {
+          "service": "com.githubx.pullrequest#PullRequestApi",
+          "protocol": "aws.protocols#restJson1"
+        }
+      }
+    }
+  }
+}

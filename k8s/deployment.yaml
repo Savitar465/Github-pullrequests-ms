@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-pullrequest-ms
+  labels:
+    app: github-pullrequest-ms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-pullrequest-ms
+  template:
+    metadata:
+      labels:
+        app: github-pullrequest-ms
+    spec:
+      containers:
+        - name: github-pullrequest-ms
+          image: github-pullrequest-ms:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: github-pullrequest-ms-config
+            - secretRef:
+                name: github-pullrequest-ms-secret
+          readinessProbe:
+            httpGet:
+              path: /api/actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
