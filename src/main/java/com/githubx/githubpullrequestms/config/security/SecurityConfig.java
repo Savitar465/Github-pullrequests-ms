@@ -1,6 +1,6 @@
 package com.githubx.githubpullrequestms.config.security;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,10 +14,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthConverter jwtAuthConverter;
+    @Autowired(required = false)
+    private JwtAuthConverter jwtAuthConverter;
 
     @Value("${app.security.oauth2.enabled:true}")
     private boolean oauth2Enabled;
@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        if (oauth2Enabled) {
+        if (oauth2Enabled && jwtAuthConverter != null) {
             http
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers(

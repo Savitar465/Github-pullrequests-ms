@@ -1,5 +1,6 @@
 package com.githubx.githubpullrequestms.config.security;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
+@ConditionalOnProperty(name = "app.security.oauth2.enabled", havingValue = "true", matchIfMissing = true)
 public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter;

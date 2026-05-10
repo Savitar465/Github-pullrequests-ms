@@ -2,8 +2,10 @@ package com.githubx.githubpullrequestms;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = "spring.main.lazy-initialization=true")
+@SpringBootTest
+@ActiveProfiles("test")
 class GithubPullRequestMsApplicationTests {
 
     @Test
