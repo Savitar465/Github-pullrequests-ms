@@ -15,10 +15,18 @@ RUN sed -i 's/\r$//' mvnw && chmod +x mvnw \
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Download AWS RDS SSL certificate
+RUN apk add --no-cache curl \
+  && curl -o /app/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  && apk del curl
+
 RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
 
 COPY --from=builder /build/target/github-pullrequest-ms-*.jar app.jar
+
+RUN chown spring:spring /app/global-bundle.pem
+
+USER spring:spring
 
 ENV SERVER_PORT=8080
 EXPOSE 8080

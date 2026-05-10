@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://github-cdk-databaseinstanceaa8a5fde-dxfs78eo1x4l.cwj6aay4gbts.us-east-1.rds.amazonaws.com:5432/githubdb?sslmode=verify-full&sslrootcert=./global-bundle.pem
+    url: jdbc:postgresql://github-cdk-databaseinstanceaa8a5fde-dxfs78eo1x4l.cwj6aay4gbts.us-east-1.rds.amazonaws.com:5432/githubdb?sslmode=verify-full&sslrootcert=/app/global-bundle.pem
     username: postgres
     password: githubPass123
 
