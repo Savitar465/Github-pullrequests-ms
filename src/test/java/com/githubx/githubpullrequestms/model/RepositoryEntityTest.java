@@ -29,14 +29,15 @@ class RepositoryEntityTest {
     }
 
     @Test
-    void debeUsarValoresPorDefecto() {
+    void debePermitirValoresNullAntesDePeristir() {
         RepositoryEntity repo = RepositoryEntity.builder()
                 .owner("owner")
                 .name("repo")
                 .build();
 
-        assertEquals(RepoVisibility.PRIVATE, repo.getVisibility());
-        assertEquals("main", repo.getDefaultBranch());
+        // Valores son null antes de @PrePersist
+        assertNull(repo.getVisibility());
+        assertNull(repo.getDefaultBranch());
     }
 
     @Test
