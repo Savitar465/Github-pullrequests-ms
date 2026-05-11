@@ -111,7 +111,7 @@
         <dependency>
             <groupId>org.zalando</groupId>
             <artifactId>logbook-spring-boot-starter</artifactId>
-            <version>3.2.0</version>
+            <version>4.0.4</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
