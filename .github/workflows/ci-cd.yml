@@ -57,11 +57,15 @@ jobs:
       - name: Build with Maven
         run: ./mvnw -B -DskipTests clean package
 
+      - name: List target directory
+        run: ls -la target/
+
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
-          path: target/github-pullrequest-ms-*.jar
+          path: target/*.jar
+          if-no-files-found: error
           retention-days: 1
 
   test:
