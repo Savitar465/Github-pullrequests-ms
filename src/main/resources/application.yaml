@@ -58,3 +58,8 @@ app:
   security:
     oauth2:
       enabled: ${APP_SECURITY_OAUTH2_ENABLED:true}
+
+# ===== gRPC =====
+grpc:
+  server:
+    port: ${GRPC_PORT:9092}

@@ -1,0 +1,217 @@
+syntax = "proto3";
+
+package com.githubx.grpc;
+
+option java_package = "com.githubx.grpc.proto";
+option java_outer_classname = "PullRequestServiceProto";
+option java_multiple_files = true;
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum PrStatus {
+  PR_STATUS_UNSPECIFIED = 0;
+  PR_STATUS_OPEN        = 1;
+  PR_STATUS_CLOSED      = 2;
+  PR_STATUS_MERGED      = 3;
+}
+
+enum ReviewDecision {
+  REVIEW_DECISION_UNSPECIFIED        = 0;
+  REVIEW_DECISION_APPROVED           = 1;
+  REVIEW_DECISION_CHANGES_REQUESTED  = 2;
+  REVIEW_DECISION_COMMENTED          = 3;
+}
+
+enum MergeStrategy {
+  MERGE_STRATEGY_UNSPECIFIED = 0;
+  MERGE_STRATEGY_MERGE       = 1;
+  MERGE_STRATEGY_SQUASH      = 2;
+  MERGE_STRATEGY_REBASE      = 3;
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMMON MESSAGES
+// ─────────────────────────────────────────────────────────────
+
+message AuthorSummary {
+  string id       = 1;
+  string username = 2;
+}
+
+message PaginationMeta {
+  int32 page        = 1;
+  int32 per_page    = 2;
+  int32 total       = 3;
+  int32 total_pages = 4;
+}
+
+message PaginationRequest {
+  int32 page     = 1;
+  int32 per_page = 2;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PULL REQUEST MESSAGES
+// ─────────────────────────────────────────────────────────────
+
+message PullRequestDTO {
+  string        id            = 1;
+  string        repo_id       = 2;
+  int32         number        = 3;
+  string        title         = 4;
+  string        description   = 5;
+  string        source_branch = 6;
+  string        target_branch = 7;
+  AuthorSummary author        = 8;
+  PrStatus      status        = 9;
+  bool          has_conflicts = 10;
+  int32         commits_count = 11;
+  string        created_at    = 12;
+  string        updated_at    = 13;
+  string        merged_at     = 14;
+}
+
+message PullRequestCommentDTO {
+  string        id              = 1;
+  string        pull_request_id = 2;
+  string        body            = 3;
+  string        file_path       = 4;
+  int32         line_number     = 5;
+  AuthorSummary author          = 6;
+  string        created_at      = 7;
+  string        updated_at      = 8;
+}
+
+// ─── List Pull Requests ───────────────────────────────────────
+
+message ListPullRequestsRequest {
+  string            owner      = 1;
+  string            repo       = 2;
+  PrStatus          status     = 3;
+  PaginationRequest pagination = 4;
+}
+
+message ListPullRequestsResponse {
+  repeated PullRequestDTO pull_requests = 1;
+}
+
+// ─── Get Pull Request ─────────────────────────────────────────
+
+message GetPullRequestRequest {
+  string owner     = 1;
+  string repo      = 2;
+  int32  pr_number = 3;
+}
+
+message GetPullRequestResponse {
+  PullRequestDTO pull_request = 1;
+}
+
+// ─── Create Pull Request ──────────────────────────────────────
+
+message CreatePullRequestRequest {
+  string owner         = 1;
+  string repo          = 2;
+  string title         = 3;
+  string description   = 4;
+  string source_branch = 5;
+  string target_branch = 6;
+}
+
+message CreatePullRequestResponse {
+  PullRequestDTO pull_request = 1;
+}
+
+// ─── Review Pull Request ──────────────────────────────────────
+
+message ReviewPullRequestRequest {
+  string         owner      = 1;
+  string         repo       = 2;
+  int32          pr_number  = 3;
+  ReviewDecision decision   = 4;
+  string         comment    = 5;
+}
+
+message ReviewPullRequestResponse {
+  PullRequestDTO pull_request = 1;
+}
+
+// ─── Merge Pull Request ───────────────────────────────────────
+
+message MergePullRequestRequest {
+  string        owner          = 1;
+  string        repo           = 2;
+  int32         pr_number      = 3;
+  MergeStrategy strategy       = 4;
+  string        commit_message = 5;
+}
+
+message MergePullRequestResponse {
+  PullRequestDTO pull_request = 1;
+}
+
+// ─── Pull Request Mergeability ────────────────────────────────
+
+message GetPullRequestMergeabilityRequest {
+  string owner     = 1;
+  string repo      = 2;
+  int32  pr_number = 3;
+}
+
+message PullRequestMergeabilityDTO {
+  int32  pr_number     = 1;
+  bool   mergeable     = 2;
+  bool   has_conflicts = 3;
+  string reason        = 4;
+}
+
+message GetPullRequestMergeabilityResponse {
+  PullRequestMergeabilityDTO mergeability = 1;
+}
+
+// ─── Comments ─────────────────────────────────────────────────
+
+message ListPullRequestCommentsRequest {
+  string owner     = 1;
+  string repo      = 2;
+  int32  pr_number = 3;
+}
+
+message ListPullRequestCommentsResponse {
+  repeated PullRequestCommentDTO comments = 1;
+}
+
+message CreatePullRequestCommentRequest {
+  string owner       = 1;
+  string repo        = 2;
+  int32  pr_number   = 3;
+  string body        = 4;
+  string file_path   = 5;
+  int32  line_number = 6;
+}
+
+message CreatePullRequestCommentResponse {
+  PullRequestCommentDTO comment = 1;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICES
+// ─────────────────────────────────────────────────────────────
+
+// PullRequestPublicService — lectura pública, sin autenticación
+service PullRequestPublicService {
+  rpc GetPullRequest(GetPullRequestRequest)                               returns (GetPullRequestResponse);
+  rpc ListPullRequests(ListPullRequestsRequest)                           returns (ListPullRequestsResponse);
+  rpc ListPullRequestComments(ListPullRequestCommentsRequest)             returns (ListPullRequestCommentsResponse);
+  rpc GetPullRequestMergeability(GetPullRequestMergeabilityRequest)       returns (GetPullRequestMergeabilityResponse);
+}
+
+// PullRequestService — operaciones protegidas, requiere JWT en metadata
+service PullRequestService {
+  rpc CreatePullRequest(CreatePullRequestRequest)           returns (CreatePullRequestResponse);
+  rpc ReviewPullRequest(ReviewPullRequestRequest)           returns (ReviewPullRequestResponse);
+  rpc MergePullRequest(MergePullRequestRequest)             returns (MergePullRequestResponse);
+  rpc CreatePullRequestComment(CreatePullRequestCommentRequest) returns (CreatePullRequestCommentResponse);
+}
