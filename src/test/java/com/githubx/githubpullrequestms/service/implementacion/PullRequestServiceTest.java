@@ -4,16 +4,22 @@ import com.githubx.githubpullrequestms.dao.PullRequestDao;
 import com.githubx.githubpullrequestms.dao.PullRequestReviewDao;
 import com.githubx.githubpullrequestms.dao.RepositoryDao;
 import com.githubx.githubpullrequestms.dto.request.CreatePullRequestRequest;
+import com.githubx.githubpullrequestms.dto.request.MergePullRequestRequest;
+import com.githubx.githubpullrequestms.dto.request.ReviewPullRequestRequest;
 import com.githubx.githubpullrequestms.dto.response.AuthorSummaryResponse;
 import com.githubx.githubpullrequestms.dto.response.ListPullRequestsResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestMergeabilityResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestResponse;
 import com.githubx.githubpullrequestms.mapper.PullRequestMapper;
 import com.githubx.githubpullrequestms.model.PullRequestEntity;
+import com.githubx.githubpullrequestms.model.PullRequestReviewEntity;
 import com.githubx.githubpullrequestms.model.RepositoryEntity;
+import com.githubx.githubpullrequestms.model.enums.MergeStrategy;
 import com.githubx.githubpullrequestms.model.enums.PrStatus;
+import com.githubx.githubpullrequestms.model.enums.ReviewDecision;
 import com.githubx.githubpullrequestms.util.errorhandling.BadRequestException;
 import com.githubx.githubpullrequestms.util.errorhandling.EntityNotFoundException;
+import com.githubx.githubpullrequestms.util.errorhandling.UnprocessableEntityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -213,5 +219,197 @@ class PullRequestServiceTest {
         assertFalse(result.mergeable());
         assertTrue(result.hasConflicts());
         assertEquals("El pull request tiene conflictos", result.reason());
+    }
+
+    @Test
+    void debeRevisarPullRequest() {
+        ReviewPullRequestRequest request = new ReviewPullRequestRequest(
+                ReviewDecision.APPROVED, "LGTM!");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(reviewDao.save(any(PullRequestReviewEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(pullRequestMapper.toResponse(any()))
+                .thenReturn(new PullRequestResponse(
+                        pullRequest.getId(), "1", 1, "Test PR", "Description",
+                        "feature", "main",
+                        new AuthorSummaryResponse(userId, "testuser"),
+                        PrStatus.OPEN, false, 1,
+                        "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z", null));
+
+        PullRequestResponse result = pullRequestService.reviewPullRequest(
+                "owner", "repo", 1, request, userId.toString(), "reviewer");
+
+        assertNotNull(result);
+        verify(reviewDao).save(any(PullRequestReviewEntity.class));
+    }
+
+    @Test
+    void debeLanzarExcepcionAlRevisarPullRequestCerrado() {
+        pullRequest.setStatus(PrStatus.CLOSED);
+        ReviewPullRequestRequest request = new ReviewPullRequestRequest(
+                ReviewDecision.APPROVED, "LGTM!");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+
+        assertThrows(BadRequestException.class, () ->
+                pullRequestService.reviewPullRequest("owner", "repo", 1, request, userId.toString(), "reviewer"));
+    }
+
+    @Test
+    void debeMergearPullRequest() {
+        MergePullRequestRequest request = new MergePullRequestRequest(
+                MergeStrategy.MERGE, "Merge PR #1");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
+        when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(0);
+        when(pullRequestDao.save(any(PullRequestEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(pullRequestMapper.toResponse(any()))
+                .thenReturn(new PullRequestResponse(
+                        pullRequest.getId(), "1", 1, "Test PR", "Description",
+                        "feature", "main",
+                        new AuthorSummaryResponse(userId, "testuser"),
+                        PrStatus.MERGED, false, 1,
+                        "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z", null));
+
+        PullRequestResponse result = pullRequestService.mergePullRequest(
+                "owner", "repo", 1, request, userId.toString(), "merger");
+
+        assertNotNull(result);
+        assertEquals(PrStatus.MERGED, result.status());
+        verify(pullRequestDao).save(any(PullRequestEntity.class));
+    }
+
+    @Test
+    void debeLanzarExcepcionAlMergearPullRequestCerrado() {
+        pullRequest.setStatus(PrStatus.CLOSED);
+        MergePullRequestRequest request = new MergePullRequestRequest(
+                MergeStrategy.MERGE, "Merge PR #1");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+
+        assertThrows(BadRequestException.class, () ->
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+    }
+
+    @Test
+    void debeLanzarExcepcionAlMergearPullRequestConConflictos() {
+        pullRequest.setHasConflicts(true);
+        MergePullRequestRequest request = new MergePullRequestRequest(
+                MergeStrategy.MERGE, "Merge PR #1");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+
+        assertThrows(UnprocessableEntityException.class, () ->
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+    }
+
+    @Test
+    void debeLanzarExcepcionAlMergearSinAprobacion() {
+        MergePullRequestRequest request = new MergePullRequestRequest(
+                MergeStrategy.MERGE, "Merge PR #1");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(false);
+
+        assertThrows(UnprocessableEntityException.class, () ->
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+    }
+
+    @Test
+    void debeLanzarExcepcionAlMergearConCambiosSolicitados() {
+        MergePullRequestRequest request = new MergePullRequestRequest(
+                MergeStrategy.MERGE, "Merge PR #1");
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
+        when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(1);
+
+        assertThrows(UnprocessableEntityException.class, () ->
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+    }
+
+    @Test
+    void debeIndicarNoMergeableSiNoEstaAbierto() {
+        pullRequest.setStatus(PrStatus.CLOSED);
+
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
+        when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(0);
+
+        PullRequestMergeabilityResponse result =
+                pullRequestService.getPullRequestMergeability("owner", "repo", 1);
+
+        assertFalse(result.mergeable());
+        assertEquals("El pull request no esta abierto", result.reason());
+    }
+
+    @Test
+    void debeIndicarNoMergeableSiNoTieneAprobacion() {
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(false);
+        when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(0);
+
+        PullRequestMergeabilityResponse result =
+                pullRequestService.getPullRequestMergeability("owner", "repo", 1);
+
+        assertFalse(result.mergeable());
+        assertEquals("El pull request necesita al menos una aprobacion", result.reason());
+    }
+
+    @Test
+    void debeIndicarNoMergeableSiTieneCambiosSolicitados() {
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.of(pullRequest));
+        when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
+        when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(1);
+
+        PullRequestMergeabilityResponse result =
+                pullRequestService.getPullRequestMergeability("owner", "repo", 1);
+
+        assertFalse(result.mergeable());
+        assertEquals("El pull request tiene solicitudes de cambios pendientes", result.reason());
+    }
+
+    @Test
+    void debeLanzarExcepcionSiPullRequestNoExiste() {
+        when(repositoryDao.findByOwnerAndName("owner", "repo"))
+                .thenReturn(Optional.of(repository));
+        when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
+                .thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () ->
+                pullRequestService.getPullRequest("owner", "repo", 1));
     }
 }

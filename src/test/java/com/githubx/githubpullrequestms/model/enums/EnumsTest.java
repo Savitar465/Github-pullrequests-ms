@@ -75,4 +75,90 @@ class EnumsTest {
         assertEquals(MergeStrategy.SQUASH, MergeStrategy.valueOf("SQUASH"));
         assertEquals(MergeStrategy.REBASE, MergeStrategy.valueOf("REBASE"));
     }
+
+    @Test
+    void prStatusGetValue() {
+        assertEquals("open", PrStatus.OPEN.getValue());
+        assertEquals("closed", PrStatus.CLOSED.getValue());
+        assertEquals("merged", PrStatus.MERGED.getValue());
+    }
+
+    @Test
+    void prStatusFromValue() {
+        assertEquals(PrStatus.OPEN, PrStatus.fromValue("open"));
+        assertEquals(PrStatus.CLOSED, PrStatus.fromValue("closed"));
+        assertEquals(PrStatus.MERGED, PrStatus.fromValue("merged"));
+    }
+
+    @Test
+    void prStatusFromValueCaseInsensitive() {
+        assertEquals(PrStatus.OPEN, PrStatus.fromValue("OPEN"));
+        assertEquals(PrStatus.CLOSED, PrStatus.fromValue("Closed"));
+    }
+
+    @Test
+    void prStatusFromValueInvalidThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> PrStatus.fromValue("invalid"));
+    }
+
+    @Test
+    void mergeStrategyGetValue() {
+        assertEquals("merge", MergeStrategy.MERGE.getValue());
+        assertEquals("squash", MergeStrategy.SQUASH.getValue());
+        assertEquals("rebase", MergeStrategy.REBASE.getValue());
+    }
+
+    @Test
+    void mergeStrategyFromValue() {
+        assertEquals(MergeStrategy.MERGE, MergeStrategy.fromValue("merge"));
+        assertEquals(MergeStrategy.SQUASH, MergeStrategy.fromValue("squash"));
+        assertEquals(MergeStrategy.REBASE, MergeStrategy.fromValue("rebase"));
+    }
+
+    @Test
+    void mergeStrategyFromValueCaseInsensitive() {
+        assertEquals(MergeStrategy.MERGE, MergeStrategy.fromValue("MERGE"));
+        assertEquals(MergeStrategy.SQUASH, MergeStrategy.fromValue("Squash"));
+    }
+
+    @Test
+    void mergeStrategyFromValueInvalidThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> MergeStrategy.fromValue("invalid"));
+    }
+
+    @Test
+    void reviewDecisionGetValue() {
+        assertEquals("approved", ReviewDecision.APPROVED.getValue());
+        assertEquals("changes_requested", ReviewDecision.CHANGES_REQUESTED.getValue());
+        assertEquals("commented", ReviewDecision.COMMENTED.getValue());
+    }
+
+    @Test
+    void reviewDecisionFromValue() {
+        assertEquals(ReviewDecision.APPROVED, ReviewDecision.fromValue("approved"));
+        assertEquals(ReviewDecision.CHANGES_REQUESTED, ReviewDecision.fromValue("changes_requested"));
+        assertEquals(ReviewDecision.COMMENTED, ReviewDecision.fromValue("commented"));
+    }
+
+    @Test
+    void reviewDecisionFromValueCaseInsensitive() {
+        assertEquals(ReviewDecision.APPROVED, ReviewDecision.fromValue("APPROVED"));
+        assertEquals(ReviewDecision.CHANGES_REQUESTED, ReviewDecision.fromValue("Changes_Requested"));
+    }
+
+    @Test
+    void reviewDecisionFromValueInvalidThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> ReviewDecision.fromValue("invalid"));
+    }
+
+    @Test
+    void repoVisibilityFromValueInvalidThrowsException() {
+        assertThrows(IllegalArgumentException.class, () -> RepoVisibility.fromValue("invalid"));
+    }
+
+    @Test
+    void repoVisibilityFromValueCaseInsensitive() {
+        assertEquals(RepoVisibility.PUBLIC, RepoVisibility.fromValue("PUBLIC"));
+        assertEquals(RepoVisibility.PRIVATE, RepoVisibility.fromValue("Private"));
+    }
 }
