@@ -1,28 +1,18 @@
 # syntax=docker/dockerfile:1
 
-# Build Spring Boot fat JAR
-FROM eclipse-temurin:17-jdk-alpine AS builder
-WORKDIR /build
+FROM eclipse-temurin:25-jre
 
-COPY mvnw pom.xml ./
-COPY .mvn .mvn
-COPY src src
-
-RUN sed -i 's/\r$//' mvnw && chmod +x mvnw \
-  && ./mvnw -B -DskipTests clean package
-
-# Runtime
-FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Download AWS RDS SSL certificate
-RUN apk add --no-cache curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
   && curl -o /app/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
-  && apk del curl
+  && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd -r spring && useradd -r -g spring spring
 
-COPY --from=builder /build/target/github-pullrequest-ms-*.jar app.jar
+# Copy pre-built JAR from CI
+COPY target/*.jar app.jar
 
 RUN chown spring:spring /app/global-bundle.pem
 
