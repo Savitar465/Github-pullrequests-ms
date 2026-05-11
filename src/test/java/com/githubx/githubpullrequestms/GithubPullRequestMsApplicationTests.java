@@ -8,5 +8,7 @@ class GithubPullRequestMsApplicationTests {
 
     @Test
     void contextLoads() {
+        // This test verifies that the Spring application context loads successfully.
+        // It passes if no exception is thrown during context initialization.
     }
 }
