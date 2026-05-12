@@ -2,7 +2,6 @@ package com.githubx.githubpullrequestms.service.implementacion;
 
 import com.githubx.githubpullrequestms.dao.PullRequestDao;
 import com.githubx.githubpullrequestms.dao.PullRequestReviewDao;
-import com.githubx.githubpullrequestms.dao.RepositoryDao;
 import com.githubx.githubpullrequestms.dto.request.CreatePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.MergePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.ReviewPullRequestRequest;
@@ -33,8 +32,8 @@ public class PullRequestServiceImpl implements PullRequestService {
 
     private final PullRequestDao pullRequestDao;
     private final PullRequestReviewDao reviewDao;
-    private final RepositoryDao repositoryDao;
     private final PullRequestMapper pullRequestMapper;
+    private final RepositorySyncService repositorySyncService;
 
     @Override
     public ListPullRequestsResponse listPullRequests(String owner, String repo, PrStatus status) {
@@ -171,8 +170,7 @@ public class PullRequestServiceImpl implements PullRequestService {
     }
 
     private RepositoryEntity getRepository(String owner, String repo) {
-        return repositoryDao.findByOwnerAndName(owner, repo)
-                .orElseThrow(() -> new EntityNotFoundException("Repositorio", owner + "/" + repo));
+        return repositorySyncService.getOrSyncRepository(owner, repo);
     }
 
     private PullRequestEntity getPullRequestEntity(RepositoryEntity repository, Integer prNumber) {
