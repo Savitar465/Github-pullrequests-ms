@@ -166,3 +166,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/github-pullrequest-ms:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/github-pullrequest-ms:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/github-pullrequest-ms:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/github-pullrequest-ms:buildcache,mode=max
