@@ -1,8 +1,9 @@
 package com.githubx.githubpullrequestms.service.implementacion;
 
+import com.githubx.githubpullrequestms.client.RepositoryApiClient;
+import com.githubx.githubpullrequestms.client.dto.MergeResponse;
 import com.githubx.githubpullrequestms.dao.PullRequestDao;
 import com.githubx.githubpullrequestms.dao.PullRequestReviewDao;
-import com.githubx.githubpullrequestms.dao.RepositoryDao;
 import com.githubx.githubpullrequestms.dto.request.CreatePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.MergePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.ReviewPullRequestRequest;
@@ -43,13 +44,16 @@ class PullRequestServiceTest {
     private PullRequestDao pullRequestDao;
 
     @Mock
-    private RepositoryDao repositoryDao;
-
-    @Mock
     private PullRequestReviewDao reviewDao;
 
     @Mock
     private PullRequestMapper pullRequestMapper;
+
+    @Mock
+    private RepositorySyncService repositorySyncService;
+
+    @Mock
+    private RepositoryApiClient repositoryApiClient;
 
     @InjectMocks
     private PullRequestServiceImpl pullRequestService;
@@ -87,8 +91,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeListarPullRequestsPorRepositorio() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryOrderByCreatedAtDesc(repository))
                 .thenReturn(Collections.emptyList());
         when(pullRequestMapper.toResponseList(anyList()))
@@ -103,8 +107,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeListarPullRequestsFiltradosPorStatus() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndStatusOrderByCreatedAtDesc(repository, PrStatus.OPEN))
                 .thenReturn(Collections.emptyList());
         when(pullRequestMapper.toResponseList(anyList()))
@@ -121,8 +125,8 @@ class PullRequestServiceTest {
         CreatePullRequestRequest request = new CreatePullRequestRequest(
                 "New PR", "Description", "feature", "main");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.getNextPrNumber(repository)).thenReturn(1);
         when(pullRequestDao.save(any(PullRequestEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -148,8 +152,8 @@ class PullRequestServiceTest {
         CreatePullRequestRequest request = new CreatePullRequestRequest(
                 "New PR", "Description", "main", "main");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
 
         assertThrows(BadRequestException.class, () ->
                 pullRequestService.createPullRequest("owner", "repo", request, userId.toString(), "testuser"));
@@ -157,8 +161,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeLanzarExcepcionSiRepositorioNoExiste() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.empty());
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenThrow(new EntityNotFoundException("Repositorio", "owner/repo"));
 
         assertThrows(EntityNotFoundException.class, () ->
                 pullRequestService.listPullRequests("owner", "repo", null));
@@ -166,8 +170,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeObtenerPullRequest() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestMapper.toResponse(pullRequest))
@@ -186,8 +190,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeVerificarMergeabilidad() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
@@ -205,8 +209,8 @@ class PullRequestServiceTest {
     void debeIndicarNoMergeableSiTieneConflictos() {
         pullRequest.setHasConflicts(true);
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
@@ -226,8 +230,8 @@ class PullRequestServiceTest {
         ReviewPullRequestRequest request = new ReviewPullRequestRequest(
                 ReviewDecision.APPROVED, "LGTM!");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(reviewDao.save(any(PullRequestReviewEntity.class)))
@@ -253,8 +257,8 @@ class PullRequestServiceTest {
         ReviewPullRequestRequest request = new ReviewPullRequestRequest(
                 ReviewDecision.APPROVED, "LGTM!");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
 
@@ -267,12 +271,14 @@ class PullRequestServiceTest {
         MergePullRequestRequest request = new MergePullRequestRequest(
                 MergeStrategy.MERGE, "Merge PR #1");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
         when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(0);
+        when(repositoryApiClient.mergeBranches(eq("owner"), eq("repo"), any(), any()))
+                .thenReturn(new MergeResponse(true, "Merged successfully", "abc123", "merge"));
         when(pullRequestDao.save(any(PullRequestEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         when(pullRequestMapper.toResponse(any()))
@@ -297,8 +303,8 @@ class PullRequestServiceTest {
         MergePullRequestRequest request = new MergePullRequestRequest(
                 MergeStrategy.MERGE, "Merge PR #1");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
 
@@ -312,8 +318,8 @@ class PullRequestServiceTest {
         MergePullRequestRequest request = new MergePullRequestRequest(
                 MergeStrategy.MERGE, "Merge PR #1");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
 
@@ -326,8 +332,8 @@ class PullRequestServiceTest {
         MergePullRequestRequest request = new MergePullRequestRequest(
                 MergeStrategy.MERGE, "Merge PR #1");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(false);
@@ -341,8 +347,8 @@ class PullRequestServiceTest {
         MergePullRequestRequest request = new MergePullRequestRequest(
                 MergeStrategy.MERGE, "Merge PR #1");
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
@@ -356,8 +362,8 @@ class PullRequestServiceTest {
     void debeIndicarNoMergeableSiNoEstaAbierto() {
         pullRequest.setStatus(PrStatus.CLOSED);
 
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
@@ -372,8 +378,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeIndicarNoMergeableSiNoTieneAprobacion() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(false);
@@ -388,8 +394,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeIndicarNoMergeableSiTieneCambiosSolicitados() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.of(pullRequest));
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(true);
@@ -404,8 +410,8 @@ class PullRequestServiceTest {
 
     @Test
     void debeLanzarExcepcionSiPullRequestNoExiste() {
-        when(repositoryDao.findByOwnerAndName("owner", "repo"))
-                .thenReturn(Optional.of(repository));
+        when(repositorySyncService.getOrSyncRepository("owner", "repo"))
+                .thenReturn(repository);
         when(pullRequestDao.findByRepositoryAndNumber(repository, 1))
                 .thenReturn(Optional.empty());
 
