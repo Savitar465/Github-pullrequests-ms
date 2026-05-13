@@ -1,5 +1,8 @@
 package com.githubx.githubpullrequestms.service.implementacion;
 
+import com.githubx.githubpullrequestms.client.RepositoryApiClient;
+import com.githubx.githubpullrequestms.client.dto.MergeRequest;
+import com.githubx.githubpullrequestms.client.dto.MergeResponse;
 import com.githubx.githubpullrequestms.dao.PullRequestDao;
 import com.githubx.githubpullrequestms.dao.PullRequestReviewDao;
 import com.githubx.githubpullrequestms.dto.request.CreatePullRequestRequest;
@@ -37,6 +40,7 @@ public class PullRequestServiceImpl implements PullRequestService {
     private final PullRequestReviewDao reviewDao;
     private final PullRequestMapper pullRequestMapper;
     private final RepositorySyncService repositorySyncService;
+    private final RepositoryApiClient repositoryApiClient;
 
     @Override
     public ListPullRequestsResponse listPullRequests(String owner, String repo, PrStatus status) {
@@ -169,6 +173,30 @@ public class PullRequestServiceImpl implements PullRequestService {
             throw new UnprocessableEntityException("El pull request tiene solicitudes de cambios pendientes");
         }
 
+        // Ejecutar el merge real en el repositorio Git
+        String commitMessage = request.commitMessage() != null ? request.commitMessage() :
+                "Merge pull request #" + prNumber + " from " + pr.getSourceBranch();
+
+        MergeRequest mergeRequest = new MergeRequest(
+                pr.getSourceBranch(),
+                pr.getTargetBranch(),
+                request.strategy() != null ? request.strategy().name().toLowerCase() : "merge",
+                commitMessage,
+                currentUsername,
+                currentUsername + "@githubclone.local"
+        );
+
+        try {
+            MergeResponse mergeResponse = repositoryApiClient.mergeBranches(owner, repo, mergeRequest, null);
+
+            if (!mergeResponse.success()) {
+                throw new UnprocessableEntityException("Error al ejecutar el merge: " + mergeResponse.message());
+            }
+        } catch (Exception e) {
+            throw new UnprocessableEntityException("Error al ejecutar el merge en el repositorio: " + e.getMessage());
+        }
+
+        // Actualizar el estado del PR en la base de datos
         pr.setStatus(PrStatus.MERGED);
         pr.setMergedAt(Instant.now());
         pr.setMergedById(UUID.fromString(currentUserId));
