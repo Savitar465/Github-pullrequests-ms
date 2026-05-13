@@ -284,7 +284,7 @@ class PullRequestServiceTest {
                         "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z", null));
 
         PullRequestResponse result = pullRequestService.mergePullRequest(
-                "owner", "repo", 1, request, userId.toString(), "merger");
+                "owner", "repo", 1, request, userId.toString(), "merger", null);
 
         assertNotNull(result);
         assertEquals(PrStatus.MERGED, result.status());
@@ -303,7 +303,7 @@ class PullRequestServiceTest {
                 .thenReturn(Optional.of(pullRequest));
 
         assertThrows(BadRequestException.class, () ->
-                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger", null));
     }
 
     @Test
@@ -318,7 +318,7 @@ class PullRequestServiceTest {
                 .thenReturn(Optional.of(pullRequest));
 
         assertThrows(UnprocessableEntityException.class, () ->
-                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger", null));
     }
 
     @Test
@@ -333,7 +333,7 @@ class PullRequestServiceTest {
         when(pullRequestDao.hasApprovedReview(pullRequest)).thenReturn(false);
 
         assertThrows(UnprocessableEntityException.class, () ->
-                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger", null));
     }
 
     @Test
@@ -349,7 +349,7 @@ class PullRequestServiceTest {
         when(pullRequestDao.countChangesRequestedReviews(pullRequest)).thenReturn(1);
 
         assertThrows(UnprocessableEntityException.class, () ->
-                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger"));
+                pullRequestService.mergePullRequest("owner", "repo", 1, request, userId.toString(), "merger", null));
     }
 
     @Test

@@ -80,6 +80,7 @@ public class GrpcPullRequestServiceImpl extends PullRequestServiceGrpc.PullReque
                                  StreamObserver<MergePullRequestResponse> obs) {
         try {
             String[] userInfo = extractUserInfo();
+            String authToken = extractRawToken();
             var request = new MergePullRequestRequest(
                     mapper.fromProtoMergeStrategy(req.getStrategy()),
                     req.getCommitMessage().isEmpty() ? null : req.getCommitMessage()
@@ -88,7 +89,7 @@ public class GrpcPullRequestServiceImpl extends PullRequestServiceGrpc.PullReque
                     .setPullRequest(mapper.toProto(
                             pullRequestService.mergePullRequest(
                                     req.getOwner(), req.getRepo(), req.getPrNumber(),
-                                    request, userInfo[0], userInfo[1])))
+                                    request, userInfo[0], userInfo[1], authToken)))
                     .build());
             obs.onCompleted();
         } catch (Exception e) {
@@ -119,6 +120,14 @@ public class GrpcPullRequestServiceImpl extends PullRequestServiceGrpc.PullReque
     }
 
     // ─── Helpers ──────────────────────────────────────────────
+
+    private String extractRawToken() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwtAuth) {
+            return jwtAuth.getToken().getTokenValue();
+        }
+        return null;
+    }
 
     private String[] extractUserInfo() {
         var auth = SecurityContextHolder.getContext().getAuthentication();

@@ -188,7 +188,7 @@ class V1ApiDelegateImplTest {
                 com.githubx.githubpullrequestms.model.enums.MergeStrategy.SQUASH, "Merge commit");
 
         when(smithyDtoMapper.toMergePullRequestRequest(mergeBody)).thenReturn(request);
-        when(pullRequestService.mergePullRequest(eq("owner"), eq("repo"), eq(1), eq(request), anyString(), anyString()))
+        when(pullRequestService.mergePullRequest(eq("owner"), eq("repo"), eq(1), eq(request), anyString(), anyString(), any()))
                 .thenReturn(pullRequestResponse);
         when(smithyDtoMapper.toPullRequestDTO(pullRequestResponse)).thenReturn(pullRequestDTO);
 
@@ -196,7 +196,7 @@ class V1ApiDelegateImplTest {
                 "owner", "repo", BigDecimal.ONE, mergeBody);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(pullRequestService).mergePullRequest(eq("owner"), eq("repo"), eq(1), eq(request), anyString(), anyString());
+        verify(pullRequestService).mergePullRequest(eq("owner"), eq("repo"), eq(1), eq(request), anyString(), anyString(), any());
     }
 
     @Test
