@@ -27,7 +27,7 @@ public interface PullRequestService {
             ReviewPullRequestRequest request, String currentUserId, String currentUsername);
 
     PullRequestResponse mergePullRequest(String owner, String repo, Integer prNumber,
-            MergePullRequestRequest request, String currentUserId, String currentUsername);
+            MergePullRequestRequest request, String currentUserId, String currentUsername, String authToken);
 
     PullRequestMergeabilityResponse getPullRequestMergeability(String owner, String repo, Integer prNumber);
 }

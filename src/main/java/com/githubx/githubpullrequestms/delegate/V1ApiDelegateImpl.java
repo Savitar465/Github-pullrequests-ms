@@ -128,8 +128,9 @@ public class V1ApiDelegateImpl implements V1ApiDelegate {
             MergePullRequestBody mergePullRequestBody) {
         MergePullRequestRequest request = smithyDtoMapper.toMergePullRequestRequest(mergePullRequestBody);
         String[] userInfo = getCurrentUserInfo();
+        String authToken = getCurrentAuthToken();
         PullRequestResponse response = pullRequestService.mergePullRequest(
-                owner, repo, prNumber.intValue(), request, userInfo[0], userInfo[1]);
+                owner, repo, prNumber.intValue(), request, userInfo[0], userInfo[1], authToken);
         return ResponseEntity.ok(smithyDtoMapper.toPullRequestDTO(response));
     }
 
@@ -182,5 +183,13 @@ public class V1ApiDelegateImpl implements V1ApiDelegate {
             return new String[]{userId, username};
         }
         return new String[]{UUID.randomUUID().toString(), "anonymous"};
+    }
+
+    private String getCurrentAuthToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return jwt.getTokenValue();
+        }
+        return null;
     }
 }

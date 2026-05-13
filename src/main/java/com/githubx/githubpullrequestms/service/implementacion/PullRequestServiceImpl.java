@@ -153,7 +153,7 @@ public class PullRequestServiceImpl implements PullRequestService {
     @Override
     @Transactional
     public PullRequestResponse mergePullRequest(String owner, String repo, Integer prNumber,
-            MergePullRequestRequest request, String currentUserId, String currentUsername) {
+            MergePullRequestRequest request, String currentUserId, String currentUsername, String authToken) {
         RepositoryEntity repository = getRepository(owner, repo);
         PullRequestEntity pr = getPullRequestEntity(repository, prNumber);
 
@@ -187,7 +187,7 @@ public class PullRequestServiceImpl implements PullRequestService {
         );
 
         try {
-            MergeResponse mergeResponse = repositoryApiClient.mergeBranches(owner, repo, mergeRequest, null);
+            MergeResponse mergeResponse = repositoryApiClient.mergeBranches(owner, repo, mergeRequest, authToken);
 
             if (!mergeResponse.success()) {
                 throw new UnprocessableEntityException("Error al ejecutar el merge: " + mergeResponse.message());
