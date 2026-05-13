@@ -12,8 +12,10 @@ service PullRequestApi {
     version: "1.0.0"
     operations: [
         ListPullRequests
+        SearchPullRequests
         CreatePullRequest
         GetPullRequest
+        ClosePullRequest
         ReviewPullRequest
         MergePullRequest
         ListPullRequestComments

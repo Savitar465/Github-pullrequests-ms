@@ -9,10 +9,12 @@ import com.githubx.githubpullrequestms.dto.response.ListPullRequestsResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestCommentResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestMergeabilityResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestResponse;
+import com.githubx.githubpullrequestms.dto.response.SearchPullRequestsResponse;
 import com.githubx.githubpullrequestms.mapper.SmithyDtoMapper;
 import com.githubx.githubpullrequestms.service.contratos.PullRequestCommentService;
 import com.githubx.githubpullrequestms.service.contratos.PullRequestService;
 import com.smithy.g.pullrequest.server.pullrequest.api.V1ApiDelegate;
+import com.smithy.g.pullrequest.server.pullrequest.model.ClosePullRequestBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.CreatePullRequestBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.CreatePullRequestCommentBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.ListPullRequestCommentsBody;
@@ -23,6 +25,7 @@ import com.smithy.g.pullrequest.server.pullrequest.model.PullRequestCommentDTO;
 import com.smithy.g.pullrequest.server.pullrequest.model.PullRequestDTO;
 import com.smithy.g.pullrequest.server.pullrequest.model.PullRequestMergeabilityDTO;
 import com.smithy.g.pullrequest.server.pullrequest.model.ReviewPullRequestBody;
+import com.smithy.g.pullrequest.server.pullrequest.model.SearchPullRequestsBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +57,23 @@ public class V1ApiDelegateImpl implements V1ApiDelegate {
     }
 
     @Override
+    public ResponseEntity<SearchPullRequestsBody> searchPullRequests(
+            String owner,
+            String repo,
+            String q,
+            PrStatus status,
+            BigDecimal page,
+            BigDecimal perPage) {
+        com.githubx.githubpullrequestms.model.enums.PrStatus mappedStatus =
+                smithyDtoMapper.mapSmithyPrStatus(status);
+        int pageNum = page != null ? page.intValue() : 1;
+        int perPageNum = perPage != null ? perPage.intValue() : 20;
+        SearchPullRequestsResponse response = pullRequestService.searchPullRequests(
+                owner, repo, q, mappedStatus, pageNum, perPageNum);
+        return ResponseEntity.ok(smithyDtoMapper.toSearchPullRequestsBody(response));
+    }
+
+    @Override
     public ResponseEntity<PullRequestDTO> createPullRequest(
             String owner,
             String repo,
@@ -72,6 +92,18 @@ public class V1ApiDelegateImpl implements V1ApiDelegate {
             String repo,
             BigDecimal prNumber) {
         PullRequestResponse response = pullRequestService.getPullRequest(owner, repo, prNumber.intValue());
+        return ResponseEntity.ok(smithyDtoMapper.toPullRequestDTO(response));
+    }
+
+    @Override
+    public ResponseEntity<PullRequestDTO> closePullRequest(
+            String owner,
+            String repo,
+            BigDecimal prNumber,
+            ClosePullRequestBody closePullRequestBody) {
+        String[] userInfo = getCurrentUserInfo();
+        PullRequestResponse response = pullRequestService.closePullRequest(
+                owner, repo, prNumber.intValue(), userInfo[0], userInfo[1]);
         return ResponseEntity.ok(smithyDtoMapper.toPullRequestDTO(response));
     }
 

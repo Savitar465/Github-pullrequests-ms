@@ -8,6 +8,9 @@ import com.githubx.githubpullrequestms.dto.request.ReviewPullRequestRequest;
 import com.githubx.githubpullrequestms.dto.response.ListPullRequestsResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestMergeabilityResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestResponse;
+import com.githubx.githubpullrequestms.dto.response.SearchPullRequestsResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import com.githubx.githubpullrequestms.mapper.PullRequestMapper;
 import com.githubx.githubpullrequestms.model.PullRequestEntity;
 import com.githubx.githubpullrequestms.model.PullRequestReviewEntity;
@@ -48,6 +51,25 @@ public class PullRequestServiceImpl implements PullRequestService {
     }
 
     @Override
+    public SearchPullRequestsResponse searchPullRequests(String owner, String repo, String query,
+            PrStatus status, int page, int perPage) {
+        RepositoryEntity repository = getRepository(owner, repo);
+        PageRequest pageRequest = PageRequest.of(page - 1, perPage);
+        String searchPattern = "%" + query.toLowerCase() + "%";
+
+        Page<PullRequestEntity> prPage = status == null
+                ? pullRequestDao.searchByTitleOrDescription(repository, searchPattern, pageRequest)
+                : pullRequestDao.searchByTitleOrDescriptionAndStatus(repository, searchPattern, status, pageRequest);
+
+        List<PullRequestResponse> responses = pullRequestMapper.toResponseList(prPage.getContent());
+
+        SearchPullRequestsResponse.PaginationInfo pagination = new SearchPullRequestsResponse.PaginationInfo(
+                page, perPage, prPage.getTotalElements(), prPage.getTotalPages());
+
+        return new SearchPullRequestsResponse(responses, pagination);
+    }
+
+    @Override
     @Transactional
     public PullRequestResponse createPullRequest(String owner, String repo,
             CreatePullRequestRequest request, String currentUserId, String currentUsername) {
@@ -82,6 +104,23 @@ public class PullRequestServiceImpl implements PullRequestService {
         RepositoryEntity repository = getRepository(owner, repo);
         PullRequestEntity pr = getPullRequestEntity(repository, prNumber);
         return pullRequestMapper.toResponse(pr);
+    }
+
+    @Override
+    @Transactional
+    public PullRequestResponse closePullRequest(String owner, String repo, Integer prNumber,
+            String currentUserId, String currentUsername) {
+        RepositoryEntity repository = getRepository(owner, repo);
+        PullRequestEntity pr = getPullRequestEntity(repository, prNumber);
+
+        if (pr.getStatus() != PrStatus.OPEN) {
+            throw new BadRequestException("Solo se pueden cerrar pull requests abiertos");
+        }
+
+        pr.setStatus(PrStatus.CLOSED);
+
+        PullRequestEntity closed = pullRequestDao.save(pr);
+        return pullRequestMapper.toResponse(closed);
     }
 
     @Override
