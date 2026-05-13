@@ -5,6 +5,7 @@ metadata:
   labels:
     app: github-pullrequest-ms
 data:
+  SPRING_PROFILES_ACTIVE: "aws"
   DB_HOST: "postgres"
   DB_PORT: "5432"
   DB_NAME: "github_pullrequest_db"
