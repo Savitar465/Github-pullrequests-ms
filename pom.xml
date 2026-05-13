@@ -278,7 +278,7 @@
                 </executions>
             </plugin>
         </plugins>
-        <finalName>Github-pullrequest-ms</finalName>
+        <finalName>Github-pullrequests-ms</finalName>
     </build>
     <profiles>
         <profile>

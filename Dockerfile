@@ -1,24 +1,16 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:25-jdk-alpine
 
-WORKDIR /app
+LABEL org.opencontainers.image.title="Github-pullrequest-ms" \
+	org.opencontainers.image.description="Microservicio de pull requets" \
+	org.opencontainers.image.vendor="Githubx" \
+	org.opencontainers.image.url="https://github.com/Savitar465/Github-pullrequests-ms" \
+	org.opencontainers.image.source="https://github.com/Savitar465/Github-pullrequests-ms" \
+	org.opencontainers.image.documentation="https://github.com/Savitar465/Github-pullrequests-ms/blob/main/README.md" \
+	org.opencontainers.image.authors="Savitar465"
+EXPOSE 8084
+USER root
 
-# Download AWS RDS SSL certificate
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-  && curl -o /app/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
-  && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-
-RUN groupadd -r spring && useradd -r -g spring spring
-
-# Copy pre-built JAR from CI
-COPY target/*.jar app.jar
-
-RUN chown spring:spring /app/global-bundle.pem
-
-USER spring:spring
-
-ENV SERVER_PORT=8080
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+COPY target/Github-pullrequests-ms.jar Github-pullrequests-ms.jar
+ENTRYPOINT ["java","-jar","/Github-pullrequests-ms.jar"]
