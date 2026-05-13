@@ -63,3 +63,8 @@ app:
   services:
     repository-ms:
       url: ${APP_SERVICES_REPOSITORY_MS_URL:http://localhost:8090}
+
+# ===== gRPC =====
+grpc:
+  server:
+    port: ${GRPC_PORT:9092}
