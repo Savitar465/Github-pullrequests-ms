@@ -10,7 +10,10 @@ import com.githubx.githubpullrequestms.dto.response.ListPullRequestsResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestCommentResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestMergeabilityResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestResponse;
+import com.githubx.githubpullrequestms.dto.response.SearchPullRequestsResponse;
 import com.smithy.g.pullrequest.server.pullrequest.model.AuthorSummary;
+import com.smithy.g.pullrequest.server.pullrequest.model.PaginationMeta;
+import com.smithy.g.pullrequest.server.pullrequest.model.SearchPullRequestsBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.CreatePullRequestBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.CreatePullRequestCommentBody;
 import com.smithy.g.pullrequest.server.pullrequest.model.ListPullRequestCommentsBody;
@@ -100,6 +103,21 @@ public interface SmithyDtoMapper {
         if (response == null) return null;
         ListPullRequestsBody body = new ListPullRequestsBody();
         body.setPullRequests(toPullRequestDTOList(response.pullRequests()));
+        return body;
+    }
+
+    default SearchPullRequestsBody toSearchPullRequestsBody(SearchPullRequestsResponse response) {
+        if (response == null) return null;
+        SearchPullRequestsBody body = new SearchPullRequestsBody();
+        body.setPullRequests(toPullRequestDTOList(response.pullRequests()));
+
+        PaginationMeta pagination = new PaginationMeta();
+        pagination.setPage(BigDecimal.valueOf(response.pagination().page()));
+        pagination.setPerPage(BigDecimal.valueOf(response.pagination().perPage()));
+        pagination.setTotal(BigDecimal.valueOf(response.pagination().total()));
+        pagination.setTotalPages(BigDecimal.valueOf(response.pagination().totalPages()));
+        body.setPagination(pagination);
+
         return body;
     }
 

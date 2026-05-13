@@ -107,6 +107,71 @@ structure ListPullRequestsBody {
     pullRequests: PullRequestList
 }
 
+@http(method: "GET", uri: "/v1/repos/{owner}/{repo}/pulls/search", code: 200)
+@readonly
+@documentation("Busca pull requests por título o descripción.")
+operation SearchPullRequests {
+    input: SearchPullRequestsInput
+    output: SearchPullRequestsOutput
+    errors: [
+        UnauthorizedError
+        ForbiddenError
+        NotFoundError
+        InternalServerError
+    ]
+}
+
+structure SearchPullRequestsInput {
+    @required
+    @httpLabel
+    owner: Username
+
+    @required
+    @httpLabel
+    repo: RepoName
+
+    @required
+    @httpQuery("q")
+    query: String
+
+    @httpQuery("status")
+    status: PrStatus
+
+    @httpQuery("page")
+    page: Integer
+
+    @httpQuery("perPage")
+    perPage: Integer
+}
+
+structure SearchPullRequestsOutput {
+    @required
+    @httpPayload
+    body: SearchPullRequestsBody
+}
+
+structure SearchPullRequestsBody {
+    @required
+    pullRequests: PullRequestList
+
+    @required
+    pagination: PaginationMeta
+}
+
+structure PaginationMeta {
+    @required
+    page: Integer
+
+    @required
+    perPage: Integer
+
+    @required
+    total: Integer
+
+    @required
+    totalPages: Integer
+}
+
 @http(method: "POST", uri: "/v1/repos/{owner}/{repo}/pulls", code: 201)
 @documentation("Crea un pull request entre dos ramas. RF07.1")
 operation CreatePullRequest {
@@ -442,4 +507,47 @@ structure GetPullRequestMergeabilityOutput {
     @required
     @httpPayload
     body: PullRequestMergeabilityDTO
+}
+
+@http(method: "PATCH", uri: "/v1/repos/{owner}/{repo}/pulls/{prNumber}", code: 200)
+@documentation("Cierra un pull request sin hacer merge.")
+operation ClosePullRequest {
+    input: ClosePullRequestInput
+    output: ClosePullRequestOutput
+    errors: [
+        BadRequestError
+        UnauthorizedError
+        ForbiddenError
+        NotFoundError
+        InternalServerError
+    ]
+}
+
+structure ClosePullRequestInput {
+    @required
+    @httpLabel
+    owner: Username
+
+    @required
+    @httpLabel
+    repo: RepoName
+
+    @required
+    @httpLabel
+    prNumber: Integer
+
+    @required
+    @httpPayload
+    body: ClosePullRequestBody
+}
+
+structure ClosePullRequestBody {
+    @required
+    status: PrStatus
+}
+
+structure ClosePullRequestOutput {
+    @required
+    @httpPayload
+    body: PullRequestDTO
 }

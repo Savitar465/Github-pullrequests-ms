@@ -1,14 +1,19 @@
 package com.githubx.githubpullrequestms.service.implementacion;
 
+import com.githubx.githubpullrequestms.client.RepositoryApiClient;
+import com.githubx.githubpullrequestms.client.dto.MergeRequest;
+import com.githubx.githubpullrequestms.client.dto.MergeResponse;
 import com.githubx.githubpullrequestms.dao.PullRequestDao;
 import com.githubx.githubpullrequestms.dao.PullRequestReviewDao;
-import com.githubx.githubpullrequestms.dao.RepositoryDao;
 import com.githubx.githubpullrequestms.dto.request.CreatePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.MergePullRequestRequest;
 import com.githubx.githubpullrequestms.dto.request.ReviewPullRequestRequest;
 import com.githubx.githubpullrequestms.dto.response.ListPullRequestsResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestMergeabilityResponse;
 import com.githubx.githubpullrequestms.dto.response.PullRequestResponse;
+import com.githubx.githubpullrequestms.dto.response.SearchPullRequestsResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import com.githubx.githubpullrequestms.mapper.PullRequestMapper;
 import com.githubx.githubpullrequestms.model.PullRequestEntity;
 import com.githubx.githubpullrequestms.model.PullRequestReviewEntity;
@@ -33,8 +38,9 @@ public class PullRequestServiceImpl implements PullRequestService {
 
     private final PullRequestDao pullRequestDao;
     private final PullRequestReviewDao reviewDao;
-    private final RepositoryDao repositoryDao;
     private final PullRequestMapper pullRequestMapper;
+    private final RepositorySyncService repositorySyncService;
+    private final RepositoryApiClient repositoryApiClient;
 
     @Override
     public ListPullRequestsResponse listPullRequests(String owner, String repo, PrStatus status) {
@@ -46,6 +52,25 @@ public class PullRequestServiceImpl implements PullRequestService {
 
         List<PullRequestResponse> responses = pullRequestMapper.toResponseList(pullRequests);
         return new ListPullRequestsResponse(responses);
+    }
+
+    @Override
+    public SearchPullRequestsResponse searchPullRequests(String owner, String repo, String query,
+            PrStatus status, int page, int perPage) {
+        RepositoryEntity repository = getRepository(owner, repo);
+        PageRequest pageRequest = PageRequest.of(page - 1, perPage);
+        String searchPattern = "%" + query.toLowerCase() + "%";
+
+        Page<PullRequestEntity> prPage = status == null
+                ? pullRequestDao.searchByTitleOrDescription(repository, searchPattern, pageRequest)
+                : pullRequestDao.searchByTitleOrDescriptionAndStatus(repository, searchPattern, status, pageRequest);
+
+        List<PullRequestResponse> responses = pullRequestMapper.toResponseList(prPage.getContent());
+
+        SearchPullRequestsResponse.PaginationInfo pagination = new SearchPullRequestsResponse.PaginationInfo(
+                page, perPage, prPage.getTotalElements(), prPage.getTotalPages());
+
+        return new SearchPullRequestsResponse(responses, pagination);
     }
 
     @Override
@@ -87,6 +112,23 @@ public class PullRequestServiceImpl implements PullRequestService {
 
     @Override
     @Transactional
+    public PullRequestResponse closePullRequest(String owner, String repo, Integer prNumber,
+            String currentUserId, String currentUsername) {
+        RepositoryEntity repository = getRepository(owner, repo);
+        PullRequestEntity pr = getPullRequestEntity(repository, prNumber);
+
+        if (pr.getStatus() != PrStatus.OPEN) {
+            throw new BadRequestException("Solo se pueden cerrar pull requests abiertos");
+        }
+
+        pr.setStatus(PrStatus.CLOSED);
+
+        PullRequestEntity closed = pullRequestDao.save(pr);
+        return pullRequestMapper.toResponse(closed);
+    }
+
+    @Override
+    @Transactional
     public PullRequestResponse reviewPullRequest(String owner, String repo, Integer prNumber,
             ReviewPullRequestRequest request, String currentUserId, String currentUsername) {
         RepositoryEntity repository = getRepository(owner, repo);
@@ -111,7 +153,7 @@ public class PullRequestServiceImpl implements PullRequestService {
     @Override
     @Transactional
     public PullRequestResponse mergePullRequest(String owner, String repo, Integer prNumber,
-            MergePullRequestRequest request, String currentUserId, String currentUsername) {
+            MergePullRequestRequest request, String currentUserId, String currentUsername, String authToken) {
         RepositoryEntity repository = getRepository(owner, repo);
         PullRequestEntity pr = getPullRequestEntity(repository, prNumber);
 
@@ -131,6 +173,30 @@ public class PullRequestServiceImpl implements PullRequestService {
             throw new UnprocessableEntityException("El pull request tiene solicitudes de cambios pendientes");
         }
 
+        // Ejecutar el merge real en el repositorio Git
+        String commitMessage = request.commitMessage() != null ? request.commitMessage() :
+                "Merge pull request #" + prNumber + " from " + pr.getSourceBranch();
+
+        MergeRequest mergeRequest = new MergeRequest(
+                pr.getSourceBranch(),
+                pr.getTargetBranch(),
+                request.strategy() != null ? request.strategy().name().toLowerCase() : "merge",
+                commitMessage,
+                currentUsername,
+                currentUsername + "@githubclone.local"
+        );
+
+        try {
+            MergeResponse mergeResponse = repositoryApiClient.mergeBranches(owner, repo, mergeRequest, authToken);
+
+            if (!mergeResponse.success()) {
+                throw new UnprocessableEntityException("Error al ejecutar el merge: " + mergeResponse.message());
+            }
+        } catch (Exception e) {
+            throw new UnprocessableEntityException("Error al ejecutar el merge en el repositorio: " + e.getMessage());
+        }
+
+        // Actualizar el estado del PR en la base de datos
         pr.setStatus(PrStatus.MERGED);
         pr.setMergedAt(Instant.now());
         pr.setMergedById(UUID.fromString(currentUserId));
@@ -171,8 +237,7 @@ public class PullRequestServiceImpl implements PullRequestService {
     }
 
     private RepositoryEntity getRepository(String owner, String repo) {
-        return repositoryDao.findByOwnerAndName(owner, repo)
-                .orElseThrow(() -> new EntityNotFoundException("Repositorio", owner + "/" + repo));
+        return repositorySyncService.getOrSyncRepository(owner, repo);
     }
 
     private PullRequestEntity getPullRequestEntity(RepositoryEntity repository, Integer prNumber) {

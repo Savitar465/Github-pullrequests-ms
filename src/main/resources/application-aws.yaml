@@ -1,17 +1,23 @@
 spring:
   datasource:
-    url: jdbc:postgresql://github-cdk-databaseinstanceaa8a5fde-dxfs78eo1x4l.cwj6aay4gbts.us-east-1.rds.amazonaws.com:5432/githubdb?sslmode=verify-full&sslrootcert=/app/global-bundle.pem
-    username: postgres
-    password: githubPass123
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:github_pull_requests}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
       ddl-auto: update
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://Github-Keycl-A5slveB416N3-565620607.us-east-1.elb.amazonaws.com/realms/Github}
+
 app:
   security:
     oauth2:
-      enabled: false
+      enabled: ${APP_SECURITY_OAUTH2_ENABLED:true}
 
 logging:
   level:
