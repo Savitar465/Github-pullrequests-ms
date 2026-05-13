@@ -1,6 +1,4 @@
-# syntax=docker/dockerfile:1
-
-FROM eclipse-temurin:25-jdk-alpine
+FROM public.ecr.aws/docker/library/eclipse-temurin:21-jdk-alpine
 
 LABEL org.opencontainers.image.title="Github-pullrequest-ms" \
 	org.opencontainers.image.description="Microservicio de pull requets" \
